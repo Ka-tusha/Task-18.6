@@ -1,41 +1,32 @@
-import telebot
-from config import keys, TOKEN
-bot = telebot.TeleBot(TOKEN)
-from exeptions import ConvertionExeption, CryptoConverter
+import requests
+import json
+from config import keys
+class ConvertionExeption(Exception):
+    pass
 
+class CryptoConverter:
+ @staticmethod
+ def get_price(qoute: str, base: str, amount: str):
+     if qoute == base:
+         raise ConvertionExeption(f'Невозможно перевести одинаковые валюты {base}.')
 
-@bot.message_handler(commands= ['start', 'help'])
-def help(message: telebot.types.Message):
-    text = 'Чтобы начать работу введите команду боту в следующем формате:n\<имя валюты> \
-<в какую валюту перевести> \
-<кол-во переводимой валюты>'
-    bot.reply_to(message, text)
+     try:
+         quote_ticker = keys[qoute]
+     except KeyError:
+         raise ConvertionExeption(f'Не удалось обработать валюту {qoute}')
 
+     try:
+         base_ticker = keys[base]
 
-@bot.message_handler(commands=['values'])
-def values(message: telebot.types.Message):
-    text = 'Доступные валюты:'
-    for key in keys.keys():
-        text = '\n'.join((text, key,))
-    bot.reply_to(message, text)
+     except KeyError:
+         raise ConvertionExeption(f'Не удалось обработать валюту {base}')
 
-@bot.message_handler(content_types=['text', ])
-def convert(message: telebot.types.Message):
-    try:
-        values = message.text.split(' ')
+     try:
+         amount = float(amount)
+     except ValueError:
+         raise ConvertionExeption(f'Не удалось обработать количество {amount}')
 
-        if len(values) != 3:
-           raise ConvertionExeption('Слишком много параметров.')
+     r = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym={quote_ticker}&tsyms={base_ticker}').json()
 
-        quote, base, amount = values
-        total_base = CryptoConverter.get_price(quote, base, amount)
-    except ConvertionExeption as e:
-        bot.reply_to(message, f'Ошибка пользователя.\n{e}')
-    except ConvertionExeption as e:
-        bot.reply_to(message, f'Не удалось обработать команду\n{e}')
-    else:
-        text = f'Цена {amount} {quote} в {base} - {total_base}'
-        bot.send_message(message.chat.id, text)
+     return r[base_ticker]
 
-
-bot.polling()
