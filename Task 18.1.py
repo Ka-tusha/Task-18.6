@@ -4,11 +4,17 @@ bot = telebot.TeleBot(TOKEN)
 from exeptions import ConvertionExeption, CryptoConverter
 
 
-@bot.message_handler(commands= ['start', 'help'])
+@bot.message_handler(commands=['start'])
+def start(message: telebot.types.Message):
+    text = 'Привет! Я Бот-Конвертер валют и я могу:  \n- Показать список доступных валют через команду /values \
+    \n- Вывести конвертацию валюты через команду <имя валюты> <в какую валюту перевести> <количество переводимой валюты>\n \
+- Напомнить, что я могу через команду /help'
+    bot.reply_to(message, text)
+
+
+@bot.message_handler(commands=['help'])
 def help(message: telebot.types.Message):
-    text = 'Чтобы начать работу введите команду боту в следующем формате:n\<имя валюты> \
-<в какую валюту перевести> \
-<кол-во переводимой валюты>'
+    text = 'Чтобы начать конвертацию, введите команду боту в следующем формате: \n<имя валюты> <в какую валюту перевести> <количество переводимой валюты>\nЧтобы увидеть список всех доступных валют, введите команду\n/values'
     bot.reply_to(message, text)
 
 
@@ -25,7 +31,7 @@ def convert(message: telebot.types.Message):
         values = message.text.split(' ')
 
         if len(values) != 3:
-           raise ConvertionExeption('Слишком много параметров.')
+           raise ConvertionExeption('Ввeдите <валюту> <в какую валюту перевести> <количество переводимой валюты>.')
 
         quote, base, amount = values
         total_base = CryptoConverter.get_price(quote, base, amount)
