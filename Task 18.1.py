@@ -1,19 +1,20 @@
-import json
-
-import requests
 import telebot
-
-TOKEN = "5960940745:AAFgzWcqDZcS4FQ8Ge2GpyGPU8MZYD10gOM"
-
+from config import keys, TOKEN
 bot = telebot.TeleBot(TOKEN)
+from exeptions import ConvertionExeption, CryptoConverter
 
-keys = dict(рубль='RUB', доллар='USD', евро='EUR')
 
-@bot.message_handler(commands= ['start', 'help'])
+@bot.message_handler(commands=['start'])
+def start(message: telebot.types.Message):
+    text = 'Привет! Я Бот-Конвертер валют и я могу:  \n- Показать список доступных валют через команду /values \
+    \n- Вывести конвертацию валюты через команду <имя валюты> <в какую валюту перевести> <количество переводимой валюты>\n \
+- Напомнить, что я могу через команду /help'
+    bot.reply_to(message, text)
+
+
+@bot.message_handler(commands=['help'])
 def help(message: telebot.types.Message):
-    text = 'Чтобы начать работу введите команду боту в следующем формате:n\<имя валюты> \
-<в какую валюту перевести> \
-<кол-во переводимой валюты>'
+    text = 'Чтобы начать конвертацию, введите команду боту в следующем формате: \n<имя валюты> <в какую валюту перевести> <количество переводимой валюты>\nЧтобы увидеть список всех доступных валют, введите команду\n/values'
     bot.reply_to(message, text)
 
 
@@ -26,10 +27,21 @@ def values(message: telebot.types.Message):
 
 @bot.message_handler(content_types=['text', ])
 def convert(message: telebot.types.Message):
-    quote, base, amount = message.text.split(' ')
-    r = requests.get(f'https://min-api.cryptocompare.com/data/price?fsym={keys[quote]}&tsyms={keys[base]}')
-    total_base = json.loads(r.content)[keys[base]]
-    text = f'Цена {amount} {quote} в {base} - {total_base}'
-    bot.send_message(message.chat.id, text)
+    try:
+        values = message.text.split(' ')
+
+        if len(values) != 3:
+           raise ConvertionExeption('Ввeдите <валюту> <в какую валюту перевести> <количество переводимой валюты>.')
+
+        quote, base, amount = values
+        total_base = CryptoConverter.get_price(quote, base, amount)
+    except ConvertionExeption as e:
+        bot.reply_to(message, f'Ошибка пользователя.\n{e}')
+    except ConvertionExeption as e:
+        bot.reply_to(message, f'Не удалось обработать команду\n{e}')
+    else:
+        text = f'Цена {amount} {quote} в {base} - {total_base}'
+        bot.send_message(message.chat.id, text)
+
 
 bot.polling()
